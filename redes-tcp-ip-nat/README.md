@@ -48,7 +48,7 @@ Durante a captura, foi identificada uma conexão HTTPS com as seguintes informa�
 - Porta de origem: `44792`
 - Porta de destino: `443`
 
-![Captura de tráfego HTTPS antes do NAT](nat.png)
+![Captura de tráfego HTTPS antes do NAT](nat.PNG)
 
 ## Minha análise
 
