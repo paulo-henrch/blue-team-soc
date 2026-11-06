@@ -1,76 +1,138 @@
-# Laboratório – Análise de UDP no Wireshark
+# Laboratório — Análise do protocolo UDP no Wireshark
 
 ## Objetivo
 
-Observar o comportamento do UDP na troca de mensagens entre Windows e Linux, relacionando a captura de rede com os sockets e o conteúdo recebido pelas aplicações.
-
-## Resumo teórico
-
-O UDP é um protocolo de transporte que envia datagramas sem handshake e não fornece confirmação de entrega, retransmissão ou ordenação. Seu cabeçalho tem **8 bytes**, divididos entre porta de origem, porta de destino, comprimento e checksum.
-
-É utilizado em aplicações como DNS, DHCP, jogos e comunicação em tempo real. A menor sobrecarga não significa que será sempre mais rápido que o TCP.
-
-O checksum detecta possíveis erros, mas não fornece criptografia ou autenticidade. No IPv4, seu uso é opcional; no IPv6, é obrigatório como regra geral. O estado **unverified** indica apenas que o Wireshark não verificou o cálculo.
+Capturar e analisar datagramas UDP em consultas DNS e na troca de mensagens entre Windows e Linux. Identificar portas, cabeçalho e payload, relacionando as evidências com a análise de tráfego em um SOC N1.
 
 ## Ambiente
 
-- Windows: `192.168.0.90`, utilizando PowerShell e porta UDP `56000`.
-- VM Debian: `192.168.0.114`, utilizando Netcat e porta UDP `46000`.
-- Wireshark: captura na interface `enp0s3`.
+- VM Debian: `192.168.0.114`, interface `enp0s3`.
+- Hospedeiro Windows: `192.168.0.90`.
+- Servidor DNS consultado: `181.213.132.2`.
+- Ferramentas: Wireshark, Netcat tradicional e PowerShell.
+- Portas da troca de mensagens: `46000` na VM e `56000` no Windows.
 
-## Filtros de exibição no Wireshark
+## Resumo sobre UDP
 
-| Filtro | Finalidade |
+O UDP (User Datagram Protocol) pertence à camada de transporte. Envia datagramas **sem estabelecer conexão previamente** e não fornece confirmação de entrega, retransmissão ou ordenação. A aplicação pode implementar controles adicionais.
+
+Seu cabeçalho tem **8 bytes**, com quatro campos de 2 bytes: porta de origem, porta de destino, comprimento e checksum. O comprimento UDP inclui cabeçalho e dados. A menor sobrecarga não garante que seja sempre mais rápido que o TCP.
+
+DNS, DHCP e aplicações de tempo real são exemplos de uso. DNS também pode utilizar TCP.
+
+## Captura DNS sobre UDP
+
+Na captura, utilizei o filtro de exibição:
+
+```wireshark
+udp.port == 53
+```
+
+### Evidência 1 — Consulta DNS
+
+![Consulta DNS e cabeçalho UDP](DNS_1.png)
+
+No pacote **19**, identifiquei uma consulta pelo registro **A** de `example.com`, enviada pela VM ao servidor DNS configurado.
+
+| Campo | Valor observado |
 |---|---|
-| `udp.port == 53` | Consultas e respostas DNS sobre UDP |
-| `udp.port == 46000` | Datagramas da troca de mensagens com o Netcat |
-| `udp.port == 46000 || icmp` | Troca de mensagens e possíveis erros ICMP |
-| `udp.port == 45678 || icmp` | Teste anterior com o receptor encerrado |
-| `udp.port == 9999` | Tráfego que interferiu na tentativa inicial |
+| Origem | `192.168.0.114:55104` |
+| Destino | `181.213.132.2:53` |
+| Identificador DNS | `0x9697` |
+| Payload UDP | 52 bytes |
+| Comprimento UDP | 60 bytes: 8 de cabeçalho + 52 de dados |
+| Checksum UDP | `0xfb3f [unverified]` |
 
-São filtros de exibição: selecionam o que aparece na lista, sem alterar os pacotes já capturados. Nos filtros com `|| icmp`, aparecem também mensagens ICMP de outras comunicações; é necessário conferir o datagrama citado dentro do erro.
+**Minha análise:** a porta temporária `55104` identificou o lado cliente, enquanto a consulta foi direcionada à porta `53` do servidor. O destino observado correspondia ao DNS configurado na máquina.
 
-## Comportamento observado
+O estado **unverified** significa que o Wireshark não verificou o checksum; não indica, por si só, erro ou ausência desse campo. O checksum detecta possíveis erros, mas não fornece autenticidade ou criptografia. No IPv4, seu uso é opcional; no IPv6, é obrigatório como regra geral.
 
-### Envio e recepção
+### Evidência 2 — Resposta DNS
 
-O Windows enviou a mensagem `Teste UDP - laboratorio SOC` diretamente para a VM, sem estabelecimento prévio de conexão. O texto apareceu no terminal do Netcat, confirmando a entrega à aplicação neste teste.
+![Resposta DNS e inversão das portas](DNS_2.png)
+
+No pacote **20**, o servidor respondeu de `181.213.132.2:53` para `192.168.0.114:55104`, invertendo os endereços e as portas. A resposta manteve o identificador DNS `0x9697` e apresentou os registros A `104.20.23.154` e `172.66.147.243`.
+
+O payload passou para **72 bytes**, e o comprimento UDP para **80 bytes**. O cabeçalho permaneceu com 8 bytes; o que aumentou foi a mensagem DNS transportada.
+
+**Minha análise:** a resposta pertence ao DNS, na camada de aplicação. Ela não representa um ACK fornecido pelo UDP.
+
+## Troca de mensagens entre Windows e Linux
+
+Na VM, utilizei o Netcat como receptor UDP:
+
+```bash
+nc -u -l -p 46000
+```
+
+A consulta abaixo permitiu observar o socket e o processo responsável:
+
+```bash
+ss -uanp 'sport = :46000'
+```
+
+Antes do recebimento, o socket aparecia como `UNCONN`, vinculado a `0.0.0.0:46000`. Depois, o Netcat tradicional mostrou `ESTAB`, associado a `192.168.0.90:56000`. **Esse estado indica uma associação local do socket ao remetente, sem handshake UDP.**
+
+Para analisar a comunicação, utilizei o filtro de exibição:
+
+```wireshark
+udp.port == 46000 || icmp
+```
+
+O filtro inclui também mensagens ICMP, que precisam ser correlacionadas com a comunicação investigada.
+
+### Evidência 3 — Mensagem enviada pelo Windows
+
+![Envio Windows para VM](UDP_1.png)
+
+O Windows enviou `Teste UDP - laboratorio SOC` diretamente para a VM. A mensagem foi exibida no terminal do Netcat.
 
 | Campo | Valor observado |
 |---|---|
 | Origem | `192.168.0.90:56000` |
 | Destino | `192.168.0.114:46000` |
-| Dados | 27 bytes |
+| Payload UDP | 27 bytes |
 | Comprimento UDP | 35 bytes: 8 de cabeçalho + 27 de dados |
+| Checksum UDP | `0xc21f [unverified]` |
 
-![Datagrama enviado pelo Windows](UDP_1.png)
+**Minha análise:** o envio ocorreu sem handshake. A captura mostrou o datagrama na rede, enquanto o texto no terminal confirmou sua entrega à aplicação neste teste.
 
-Antes do recebimento, o socket do Netcat aparecia como `UNCONN`, vinculado a `0.0.0.0:46000`. Depois, passou a mostrar `ESTAB`, associado a `192.168.0.90:56000`.
+### Evidência 4 — Resposta enviada pela VM
 
-Nesse Netcat, **ESTAB representa a associação local do socket a um remetente; não significa que ocorreu um handshake UDP**. A consulta com `ss -uanp` permitiu correlacionar o socket com o processo responsável.
+![Resposta da VM e conteúdo legível](UDP_2.png)
 
-![Socket UDP associado ao Windows](SS_UDP_NETCAT_TERMINAL.PNG)
+A VM enviou `Resposta UDP da VM` para o socket mantido aberto no Windows.
 
-### Resposta e conteúdo sem criptografia
+| Campo | Valor observado |
+|---|---|
+| Origem | `192.168.0.114:46000` |
+| Destino | `192.168.0.90:56000` |
+| Payload UDP | 19 bytes, incluindo a quebra de linha |
+| Comprimento UDP | 27 bytes: 8 de cabeçalho + 19 de dados |
 
-A VM respondeu de `192.168.0.114:46000` para `192.168.0.90:56000`, invertendo os endereços e as portas. A mensagem foi recebida no PowerShell. **Essa resposta foi gerada pela aplicação, não por um mecanismo de ACK do UDP.**
+Os endereços e as portas se inverteram. A resposta foi produzida pelo texto digitado no Netcat, **não por um ACK automático do UDP**.
 
-![Resposta da VM capturada no Wireshark](UDP_2.png)
+### Evidência 5 — Recebimento no Windows
 
-![Mensagem recebida no Windows](UDP_3.PNG)
+![Mensagem recebida no PowerShell](UDP_3.PNG)
 
-Os textos ficaram legíveis na captura porque foram enviados **sem criptografia**. A representação hexadecimal não protege o conteúdo. O UDP não criptografa os dados por si só; essa proteção depende dos protocolos utilizados pela aplicação.
+O PowerShell exibiu a mensagem enviada pela VM, confirmando a troca de dados nos dois sentidos.
 
-Ferramentas de análise também podem exibir esse conteúdo. No Wireshark, a opção **Follow → UDP Stream** permite organizar a visualização dos dados da conversa.
+## Conteúdo sem criptografia
 
-## Outras observações do laboratório
+Foi possível ler as mensagens no painel de bytes do Wireshark porque a aplicação enviou texto sem criptografia. **Hexadecimal é uma representação dos bytes, não uma forma de criptografia.**
 
-- **DNS:** a consulta foi enviada ao servidor configurado, na porta `53`. A resposta inverteu os endereços e as portas e manteve o identificador da consulta. Trata-se de uma resposta DNS, não de confirmação própria do UDP.
-- **Porta sem receptor:** após encerrar o Netcat em um teste anterior na porta `45678`, a VM respondeu com ICMP **Destination unreachable — Port unreachable**. A máquina continuava acessível, mas não havia receptor naquela porta.
-- **Interferência na porta 9999:** um broadcast de `192.168.0.111` para `255.255.255.255:9999`, identificado pelo Wireshark como TP-Link, fez o Netcat se associar a outro remetente. A correlação entre captura e socket explicou a interferência, sem evidência suficiente para classificá-la como incidente.
+O UDP não fornece criptografia por si só. Outras ferramentas de captura também podem exibir o payload quando têm acesso ao tráfego. No Wireshark, **Follow → UDP Stream** permite organizar a visualização da conversa. A legibilidade depende do formato dos dados e da proteção utilizada pela aplicação.
 
-## Aprendizados para SOC N1
+## Relação com SOC N1
 
-A análise mostrou a importância de correlacionar **IPs, portas, direção do tráfego, sockets e processos**. Um datagrama capturado comprova sua presença no ponto de captura; a mensagem exibida no terminal confirmou a entrega à aplicação.
+- **DNS esperado:** comparar o servidor consultado com a configuração e o inventário ajuda a identificar divergências. Um DNS diferente exige validação do contexto antes de classificar um incidente.
+- **Correlação de evidências:** IPs, portas, direção, payload, sockets e processos ajudam a explicar o comportamento observado.
+- **Texto claro:** conteúdo sensível sem criptografia merece avaliação conforme os dados envolvidos e as políticas da organização.
+- **Erros ICMP:** em um teste complementar, após encerrar o Netcat na porta `45678`, a VM respondeu com **Destination unreachable — Port unreachable**. A máquina continuava acessível; naquele cenário controlado, o receptor havia sido encerrado. Em uma investigação real, também seria necessário verificar sockets e firewall.
 
-Erros ICMP e ausência de resposta precisam ser interpretados com o contexto. Também foi possível reconhecer conteúdo em texto claro e distinguir respostas da aplicação dos mecanismos do protocolo de transporte.
+## Conclusão
+
+Neste laboratório, identifiquei a estrutura do UDP em consultas DNS e na troca de mensagens entre Windows e Linux. Observei a inversão dos endereços e das portas, a ausência de handshake e a diferença entre resposta da aplicação e confirmação de transporte.
+
+Também relacionei o tráfego com os sockets e confirmei que mensagens enviadas sem criptografia podem ficar legíveis na captura, reforçando a importância de interpretar as evidências dentro do contexto.
