@@ -49,15 +49,15 @@ O conjunto de indícios justifica a investigação, mas a ausência de privilég
 
 #### Consulta à matriz
 
-![Tática Execution e técnica Command and Scripting Interpreter na matriz MITRE ATT&CK](images/attack.mitre_1.PNG)
+![Tática Execution e técnica Command and Scripting Interpreter na matriz MITRE ATT&CK](attack.mitre_1.PNG)
 
 #### Técnica principal — T1059
 
-![Página da técnica Command and Scripting Interpreter, com a subtécnica PowerShell destacada](images/attack.mitre_2.PNG)
+![Página da técnica Command and Scripting Interpreter, com a subtécnica PowerShell destacada](attack.mitre_2.PNG)
 
 #### Subtécnica PowerShell — T1059.001
 
-![Página da subtécnica PowerShell com ID, tática e ferramentas de teste ofensivo](images/attack.mitre_3.PNG)
+![Página da subtécnica PowerShell com ID, tática e ferramentas de teste ofensivo](attack.mitre_3.PNG)
 
 ### 6. Expansão da investigação
 
