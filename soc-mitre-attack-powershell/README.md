@@ -39,7 +39,7 @@ Selecione a alternativa correta:
 
 **Alternativa B — Baixar e executar um malware.**
 
-Essa é uma possibilidade, mas o conteúdo codificado não foi fornecido no cenário; portanto, não é possível afirmar que isso ocorreu.
+Essa é uma possibilidade.
 
 ### 4. Você investigaria esse caso no SOC?
 
