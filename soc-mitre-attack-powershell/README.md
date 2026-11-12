@@ -18,27 +18,44 @@ powershell.exe -nop -w hidden -EncodedCommand ...
 
 ### 1. Esse comportamento pode indicar algo suspeito?
 
+Justifique sua resposta.
+
 Sim. O horário, isoladamente, não é suficiente para concluir que existe atividade maliciosa. O que mais chama minha atenção é a combinação de PowerShell em modo oculto e comando codificado, especialmente se essa execução não fizer parte do comportamento esperado para o usuário e o computador.
 
 Um usuário comum também pode executar PowerShell sem ser administrador. Por exemplo, um script legítimo de manutenção ou relacionado a atualizações pode executar no contexto desse usuário, desde que as ações não exijam elevação de privilégios. Portanto, é necessário verificar o contexto e o conteúdo do comando antes de concluir que se trata de um ataque.
 
-### 2. Qual é o nome da técnica relacionada?
+### 2. Qual é o nome da técnica MITRE ATT&CK relacionada ao uso de PowerShell para execução de comandos maliciosos?
 
 **Command and Scripting Interpreter: PowerShell.**
 
-### 3. Qual é uma possível consequência desse comando?
+### 3. Qual dessas opções é uma possível consequência desse comando?
+
+Selecione a alternativa correta:
+
+- (a) Instalar atualizações automáticas
+- (b) Baixar e executar um malware
+- (c) Enviar e-mail corporativo
+- (d) Atualizar drivers de vídeo
 
 **Alternativa B — Baixar e executar um malware.**
 
 Essa é uma possibilidade, mas o conteúdo codificado não foi fornecido no cenário; portanto, não é possível afirmar que isso ocorreu.
 
-### 4. Eu investigaria esse caso no SOC?
+### 4. Você investigaria esse caso no SOC?
+
+O que te chamou a atenção nessa atividade?
 
 Sim. Investigaria a execução de PowerShell com janela oculta e comando codificado, fora do horário comercial. Verificaria se existe alguma automação ou atividade autorizada que explique esse comportamento.
 
 O conjunto de indícios justifica a investigação, mas a ausência de privilégios administrativos não torna a execução de PowerShell maliciosa por si só.
 
 ### 5. Mapeamento MITRE ATT&CK
+
+Investigue no site oficial do MITRE ATT&CK e responda:
+
+- Identifique a Tática (Tactic) e a Técnica (Technique) relacionadas ao uso do PowerShell dessa forma.
+- Cite o ID da Técnica (exemplo: T0000.001).
+- Segundo o MITRE, existem várias ferramentas de teste ofensivas baseadas em PowerShell. Cite ao menos duas.
 
 | Campo | Resposta |
 | --- | --- |
@@ -59,7 +76,11 @@ O conjunto de indícios justifica a investigação, mas a ausência de privilég
 
 ![Página da subtécnica PowerShell com ID, tática e ferramentas de teste ofensivo](attack.mitre_3.PNG)
 
-### 6. Expansão da investigação
+### 6. Expansão da Investigação
+
+Baseando-se apenas no evento detectado, quais seriam os próximos passos recomendados para um analista de SOC?
+
+Selecione todas as opções corretas:
 
 Marquei as três opções relacionadas à investigação:
 
