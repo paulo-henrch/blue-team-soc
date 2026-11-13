@@ -2,46 +2,66 @@
 
 ## Objetivo
 
-Analisar requisições e respostas HTTP, os métodos GET, HEAD e POST, os códigos de status e a diferença de visibilidade entre HTTP e HTTPS.
+Observar os métodos GET, HEAD e POST, os códigos 200, 404 e 500 e a diferença entre HTTP e HTTPS na captura de tráfego.
 
 ## Ambiente
 
-- Cliente: Windows com curl e Debian no teste HTTPS.
-- Servidor local: Python na VM Debian, IP `192.168.0.114`, porta `8000`.
-- Captura: Wireshark na interface `enp0s3`.
+- Windows como cliente e VM Debian como servidor HTTP (`192.168.0.114:8000`).
+- Ferramentas: curl, servidor Python e Wireshark na interface `enp0s3`.
+- Filtros: `tcp.port == 8000` para HTTP e `tcp.port == 443` para HTTPS.
+- Análise das mensagens pela opção **Follow → TCP Stream**.
 
-## Testes realizados
-
-Comandos executados no PowerShell, com o servidor correspondente ativo na VM:
+## 1. GET — 200 OK
 
 ```powershell
-# GET: cabeçalhos e corpo da página
 curl.exe --http1.1 -v http://192.168.0.114:8000/
+```
 
-# HEAD: cabeçalhos da resposta, sem corpo
+Foi realizada uma requisição GET ao servidor local. Foram identificados o caminho solicitado (`/`), a resposta `200 OK`, os cabeçalhos e o corpo HTML. Como usamos HTTP sem criptografia, o conteúdo ficou legível na captura.
+
+![GET com resposta 200 e corpo HTML](GET.png)
+
+## 2. HEAD — resposta sem corpo
+
+```powershell
 curl.exe --http1.1 -I http://192.168.0.114:8000/
+```
 
-# Recurso inexistente
+A resposta apresentou os cabeçalhos e o código `200 OK`, sem enviar o corpo HTML. O `Content-Length: 35` indica o tamanho do corpo que seria enviado em um GET.
+
+![HEAD com cabeçalhos e sem corpo](HEAD.png)
+
+## 3. GET — 404
+
+```powershell
 curl.exe --http1.1 -v http://192.168.0.114:8000/nao-existe.html
+```
 
-# POST: envio de dados fictícios no corpo
+Foi solicitado um arquivo inexistente. O servidor respondeu com `404` e uma página HTML de erro, mostrando que respostas de erro também podem conter corpo. O cabeçalho `Connection: close` informa o encerramento da conexão após a resposta; não indica falha no handshake.
+
+![Resposta 404 para arquivo inexistente](404.png)
+
+## 4. POST — envio de dados
+
+```powershell
 curl.exe --http1.1 -v -d "usuario=paulo&mensagem=teste-soc" http://192.168.0.114:8000/formulario
+```
 
-# Erro interno simulado
+Foram enviados dados fictícios no corpo da requisição, e o servidor confirmou o recebimento com `200 OK`. A linha em branco separa os cabeçalhos do corpo. Os dados ficaram legíveis: **POST não oferece criptografia**.
+
+![POST com os dados enviados no corpo](POST.png)
+
+## 5. Erro 500 simulado
+
+```powershell
 curl.exe --http1.1 -v http://192.168.0.114:8000/erro
 ```
 
-| Teste | Resultado observado |
-|---|---|
-| GET `/` | `200 OK`, com cabeçalhos e corpo HTML. |
-| HEAD `/` | `200 OK`, sem corpo; `Content-Length` informa o tamanho que seria enviado no GET. |
-| GET `/nao-existe.html` | `404`, com uma página de erro no corpo. |
-| POST `/formulario` | Dados enviados no corpo e resposta `200 OK` confirmando o recebimento. |
-| GET `/erro` | `500 Internal Server Error`, retornado propositalmente pelo servidor do laboratório. |
+O servidor do laboratório foi programado para retornar `500 Internal Server Error`. Foram observados os cabeçalhos e a mensagem de erro no corpo. Houve resposta HTTP, diferentemente de uma conexão recusada ou timeout.
 
-No Wireshark, foi utilizado o filtro `tcp.port == 8000` e a opção **Follow → TCP Stream**. Métodos, caminhos, cabeçalhos e corpos ficaram legíveis. A linha em branco separa os cabeçalhos do corpo. **POST não criptografa os dados.**
+![Resposta 500 simulada](500.png)
 
-## Comparação com HTTPS
+## 6. Comparação com HTTPS
 
 Comando executado na VM Debian:
 
@@ -49,42 +69,15 @@ Comando executado na VM Debian:
 curl -4 --http1.1 -v https://example.com/
 ```
 
-Com o filtro `tcp.port == 443`, foram observados o handshake TCP, a negociação TLS 1.3 e registros criptografados. No Follow TCP Stream, o conteúdo HTTP não ficou legível sem as chaves TLS. O GET continuou existindo, mas protegido pela criptografia.
+O GET continuou existindo, mas o conteúdo HTTP ficou protegido pelo TLS e não apareceu legível na captura sem descriptografia. O domínio `example.com` (SNI) e o anúncio `http/1.1` (ALPN) permaneceram visíveis na negociação TLS.
 
-IPs, portas e o domínio `example.com` no SNI permaneceram visíveis. O texto `http/1.1` no Client Hello corresponde ao anúncio de protocolo via ALPN, não à requisição HTTP.
+![Fluxo HTTPS com conteúdo criptografado](HTTPS.png)
 
 ## Análise SOC N1
 
-- **Vários 404:** avaliar frequência, caminhos solicitados, origem e contexto. Links antigos ou quebrados também podem explicar esses erros; verificar se os recursos existem, foram removidos ou deveriam estar disponíveis.
-- **Caminhos sensíveis:** acessos a `/admin`, `/backup.zip` ou `/.env` podem justificar investigação, considerando usuários, ferramentas internas e varreduras autorizadas.
-- **Outras respostas:** verificar se algum caminho retornou `200` e qual conteúdo foi entregue. O código sozinho não confirma exposição nem autenticação bem-sucedida.
-- **Erro 500:** correlacionar horário, requisições e logs da aplicação; o código isolado não comprova ataque. Receber uma resposta HTTP difere de conexão recusada ou timeout.
-- **HTTP e HTTPS:** dados sensíveis podem ficar legíveis em HTTP. HTTPS protege o conteúdo, mas não garante que a comunicação seja legítima.
-
-## Evidências
-
-![GET — terminal](GET_terminal.png)
-
-![GET — pacotes](GET_pacotes.png)
-
-![GET — fluxo](GET_fluxo.png)
-
-![HEAD — terminal](HEAD_terminal.png)
-
-![HEAD — fluxo](HEAD_fluxo.png)
-
-![404 — terminal](404_terminal.png)
-
-![404 — fluxo](404_fluxo.png)
-
-![POST — terminal](POST_terminal.png)
-
-![POST — fluxo](POST_fluxo.png)
-
-![500 — terminal](500_terminal.png)
-
-![500 — fluxo](500_fluxo.png)
-
-![HTTPS — pacotes](HTTPS_pacotes.png)
-
-![HTTPS — fluxo](HTTPS_fluxo.png)
+- **Frequência e caminhos:** avaliar acessos pontuais ou repetitivos e buscas por caminhos sensíveis, como `/admin`, `/backup.zip` e `/.env`.
+- **Origem e contexto:** verificar usuários, ferramentas internas e varreduras autorizadas antes de concluir que existe ataque.
+- **404:** investigar se os recursos existem ou foram removidos; links antigos ou quebrados também podem explicar os erros.
+- **Outras respostas:** verificar se algum caminho retornou `200` e analisar o conteúdo. Esse código sozinho não confirma exposição nem login bem-sucedido.
+- **500:** correlacionar horário, requisições e logs da aplicação; o código isolado não comprova ataque.
+- **Criptografia:** HTTP pode expor dados sensíveis. HTTPS protege o conteúdo, mas IPs e portas continuam visíveis, e seu uso não garante um acesso legítimo.
