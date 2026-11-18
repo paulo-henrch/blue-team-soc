@@ -66,3 +66,11 @@ A mensagem de falha apresenta duas causas possíveis. Na triagem, o **Substatus*
 O **ID do Evento** é o código que identifica o que um provedor registrou, como uma ação, uma tentativa ou seu resultado. No provedor `Microsoft-Windows-Security-Auditing`, o `4648` registra uma tentativa com credenciais explícitas, o `4624` registra o êxito do logon e o `4625` registra uma falha de logon.
 
 Os detalhes completam a triagem. Neste lab, o **tipo 7** identificou o desbloqueio no `4624`, enquanto o **tipo 2** identificou a tentativa interativa no `4625`. A conta, o horário, a origem e o substatus ajudaram a explicar cada registro.
+
+## Relação com SOC N1
+
+Em um ambiente de SOC, os eventos do log de Segurança do Windows podem ser coletados e enviados a um SIEM. Durante a triagem de um alerta, o analista SOC N1 correlaciona esses eventos com outros registros para identificar **a conta envolvida, a estação, o horário, a origem e o resultado da tentativa**.
+
+Por exemplo, ao investigar várias falhas de logon (`4625`) seguidas de um logon bem-sucedido (`4624`), o analista compara a conta, a estação, a origem e o tipo de logon. O contexto ajuda a avaliar se a sequência é compatível com um erro de senha seguido de um acesso esperado ou se o alerta precisa ser escalado.
+
+Neste lab, o substatus `0xC000006A` indicou senha incorreta no evento `4625`. Já o tipo de logon `7` identificou o desbloqueio da estação no evento `4624`.
