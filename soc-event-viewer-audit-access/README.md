@@ -16,11 +16,13 @@ A auditoria foi configurada diretamente na estação com o `auditpol` e com uma 
 
 Usei o `auditpol` para habilitar a auditoria de sucesso na subcategoria **Sistema de Arquivos** do Windows 10. Depois, configurei uma entrada de auditoria na SACL do `Segurança.txt`, pelas propriedades de segurança do arquivo.
 
-No Visualizador de Eventos, consultei o log **Segurança**, filtrei pelo ID **4663** e identifiquei o registro pelo caminho do arquivo. O evento selecionado foi gerado pelo `FileCoAuth.exe`, processo do OneDrive.
+Abri o arquivo `Segurança.txt` e li seu conteúdo. Em seguida, no Visualizador de Eventos, consultei o log **Segurança**, filtrei pelo ID **4663** e identifiquei o registro pelo caminho do arquivo. O evento selecionado foi gerado pelo `FileCoAuth.exe`, processo do OneDrive.
 
 ## Evidência no Visualizador de Eventos
 
 A captura mostra um evento **4663**, da categoria **File System**, com a palavra-chave **Sucesso da Auditoria**.
+
+![Evento 4663 no Visualizador de Eventos com ReadAttributes registrado para Segurança.txt](evento-4663.png)
 
 | Campo | Valor observado |
 | --- | --- |
@@ -38,4 +40,4 @@ O evento 4663 registra o uso efetivo de um direito de acesso. Neste registro, `R
 
 Cruzei os campos **Requerente**, **Nome do objeto**, **Nome do processo** e **Acessos**. Às 22:22:20, o `FileCoAuth.exe` usou o direito `ReadAttributes` em `Segurança.txt` sob a conta local da estação.
 
-O caminho do executável e a localização do arquivo, em uma pasta sincronizada, são compatíveis com a atividade do OneDrive nesse ambiente. Minha conclusão para a triagem foi que o evento registra uma **leitura de atributos**. Para determinar se houve acesso ao conteúdo, eu buscaria um evento com `ReadData` para o mesmo arquivo e correlacionaria o horário e o processo.
+O caminho do executável e a localização do arquivo, em uma pasta sincronizada, são compatíveis com a atividade do OneDrive nesse ambiente. Minha conclusão para a triagem foi que o evento registra uma **leitura de atributos**. Para corroborar no log a leitura de conteúdo que realizei, eu buscaria um evento com `ReadData` para o mesmo arquivo e correlacionaria o horário e o processo.
