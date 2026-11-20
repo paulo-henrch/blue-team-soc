@@ -29,7 +29,7 @@ Na descrição do caso, registrei que a triagem deveria verificar se houve auten
 
 ## Triagem do alerta
 
-Criei três tarefas no TheHive e registrei o resultado de cada consulta simulada em **Activity**. As três ficaram com o status **Completed**.
+Criei três tarefas no TheHive para seguir minha linha de raciocínio na triagem do alerta e registrei o resultado de cada consulta simulada em **Activity**. As três ficaram com o status **Completed**.
 
 ![As três tarefas de triagem concluídas no TheHive][tarefas-concluidas]
 
@@ -47,7 +47,9 @@ Criei três tarefas no TheHive e registrei o resultado de cada consulta simulada
 
 ## Minha análise
 
-Na análise inicial, diferenciei o estabelecimento da conexão TCP da autenticação SSH. O handshake TCP de três vias (SYN → SYN/ACK → ACK), quando observado, evidencia o estabelecimento da conexão. No laboratório, o handshake ficou sem verificação em captura de pacotes. A evidência analisada foi o registro simulado de autenticação SSH.
+Na análise inicial, diferenciei o estabelecimento da conexão TCP da autenticação SSH. A conclusão do handshake de três vias (SYN → SYN/ACK → ACK) estabelece a conexão TCP com o servidor. A autenticação SSH ocorre depois, sobre essa conexão.
+
+No laboratório, o handshake ficou sem verificação em captura de pacotes. Os logs simulados do `srv-app-01`, consultados no SIEM, mostraram que as conexões chegaram à etapa de autenticação SSH. Na janela consultada, foram registradas 12 falhas e nenhum evento de autenticação bem-sucedida para o IP e o usuário analisados.
 
 O volume de falhas em uma janela curta levantou a hipótese de brute force. Também considerei a possibilidade de um acesso legítimo com erro de senha. Para avaliar o contexto, consultei se o IP estava autorizado para SSH naquele servidor no horário do alerta e validei, no cenário simulado, a existência da conta e seus privilégios.
 
@@ -57,7 +59,7 @@ Cadastrei o IP de origem `198.51.100.27` como observável no caso para vincular 
 
 Após concluir as tarefas, registrei em **Comments** a decisão de encaminhar o caso ao SOC N2, conforme o playbook do laboratório. Em seguida, preenchi o **Summary** e encerrei o caso para concluir o exercício.
 
-Classifiquei o alerta como **True Positive** porque a consulta simulada ao SIEM confirmou as 12 falhas de autenticação SSH. Marquei **Impact: No** porque a triagem N1 não identificou impacto no escopo analisado. Brute force permaneceu como hipótese.
+Classifiquei o caso como **True Positive** porque a consulta simulada ao SIEM confirmou as 12 falhas de autenticação SSH apontadas pelo alerta. Selecionei **No** no campo **Impact** porque a triagem N1 não identificou impacto no escopo analisado. A hipótese de brute force permaneceu em aberto.
 
 ### Resumo registrado no TheHive
 
