@@ -22,7 +22,7 @@ Abri o arquivo `Segurança.txt` e li seu conteúdo. Em seguida, no Visualizador 
 
 A captura mostra um evento **4663**, da categoria **File System**, com a palavra-chave **Sucesso da Auditoria**.
 
-![Evento 4663 no Visualizador de Eventos com ReadAttributes registrado para Segurança.txt](evidencias/evento-4663.png)
+![Evento 4663 no Visualizador de Eventos com ReadAttributes registrado para Segurança.txt](evento-4663.png)
 
 | Campo | Valor observado |
 | --- | --- |
@@ -40,7 +40,7 @@ O evento 4663 registra o uso efetivo de um direito de acesso. Neste registro, `R
 
 Abri o mesmo `Segurança.txt` no Bloco de Notas e filtrei novamente o log **Segurança** pelo ID **4663**. No mesmo horário, observei vários registros com `ReadAttributes` (consulta a atributos), um com `READ_CONTROL` (consulta a informações de segurança, como as permissões) e um com `ReadData` (leitura do conteúdo).
 
-![Evento 4663 com ReadData registrado para Segurança.txt pelo Bloco de Notas](evidencias/evento-4663-readdata.png)
+![Evento 4663 com ReadData registrado para Segurança.txt pelo Bloco de Notas](evento-4663-readdata.png)
 
 | Campo | Valor observado |
 | --- | --- |
