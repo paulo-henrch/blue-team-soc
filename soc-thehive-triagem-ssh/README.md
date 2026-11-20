@@ -47,9 +47,11 @@ Criei três tarefas no TheHive para seguir minha linha de raciocínio na triagem
 
 ## Minha análise
 
-Na análise inicial, diferenciei o estabelecimento da conexão TCP da autenticação SSH. A conclusão do handshake de três vias (SYN → SYN/ACK → ACK) estabelece a conexão TCP com o servidor. A autenticação SSH ocorre depois, sobre essa conexão.
+Na análise inicial, diferenciei o estabelecimento da conexão TCP da autenticação SSH. A conclusão do handshake estabelece a conexão TCP com o host `srv-app-01`. No cenário simulado, os logs indicam que a comunicação com o host chegou à etapa de autenticação SSH.
 
-No laboratório, o handshake ficou sem verificação em captura de pacotes. Os logs simulados do `srv-app-01`, consultados no SIEM, mostraram que as conexões chegaram à etapa de autenticação SSH. Na janela consultada, foram registradas 12 falhas e nenhum evento de autenticação bem-sucedida para o IP e o usuário analisados.
+Na janela consultada, os logs simulados do `srv-app-01`, exibidos no SIEM, registraram falhas de autenticação e nenhum evento de sucesso para o IP e o usuário analisados.
+
+Obs. A conexão TCP e a autenticação SSH são etapas diferentes da comunicação. A conexão permite que o cliente prossiga para a tentativa de autenticação.
 
 O volume de falhas em uma janela curta levantou a hipótese de brute force. Também considerei a possibilidade de um acesso legítimo com erro de senha. Para avaliar o contexto, consultei se o IP estava autorizado para SSH naquele servidor no horário do alerta e validei, no cenário simulado, a existência da conta e seus privilégios.
 
